@@ -341,7 +341,7 @@ def main():
             print('(NUEVO RECORD!)')
         else:
             print()
-        if ask_play_again(): # Consulta sobre paso al siguiente nivel
+        if ask_play_again():  # Consulta sobre paso al siguiente nivel
             level += 1
             cars = levels[level - 1]
         else:
