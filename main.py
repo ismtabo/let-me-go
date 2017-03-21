@@ -4,6 +4,13 @@ from __future__ import print_function
 import os
 import string
 
+__author__ = "Ismael José Taboada"
+__credits__ = ["Ismael José Taboada"]
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Ismael José Taboada"
+__email__ = "ismaeljose.taboada@alumnos.uva.es"
+
 BASEPATH = os.path.dirname(__file__)
 
 # Constantes del juego
