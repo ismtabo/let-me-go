@@ -4,31 +4,31 @@ from __future__ import print_function
 import os
 import string
 
-OUTPUT = 7, 3
-
-DIR = 0
-X = 1
-Y = 2
-SIZE = 3
 BASEPATH = os.path.dirname(__file__)
-# Caracteres para dibujar cuadros
-COE = u'\u2500'  # ‚îÄ
-CNS = u'\u2502'  # ‚îÇ
-CES = u'\u250C'  # ‚îå
-CSO = u'\u2510'  # ‚îê
-CNE = u'\u2514'  # ‚îî
-CON = u'\u2518'  # ‚îò
-COES = u'\u252C'  # ‚î¨
-CNES = u'\u251C'  # ‚îú
-CONS = u'\u2524'  # ‚î§
-CONE = u'\u2534'  # ‚î¥
-CSOM = u'\u2593'  # ‚ñí
-BLOCK_W = 5
-BLOCK_H = 3
+
+# Constantes del juego
+OUTPUT = 7, 3  # Salida
+DIR, X, Y, SIZE = 0, 1, 2, 3  # Posiciones de datos en tupla de coche
+BLOCK_W, BLOCK_H = 5, 3  # TamaÒo del bloque
 WIN = COLLISION = True
+TARGET = 'A'
+
+# Caracteres para dibujar cuadros
+COE = u'\u2500'  #
+CNS = u'\u2502'  #
+CES = u'\u250C'  #
+CSO = u'\u2510'  #
+CNE = u'\u2514'  #
+CON = u'\u2518'  #
+COES = u'\u252C'  #
+CNES = u'\u251C'  #
+CONS = u'\u2524'  #
+CONE = u'\u2534'  #
+CSOM = u'\u2593'  #
 
 
 def read_levels():
+    # Lectura del fichero de niveles
     filepath = os.path.join(BASEPATH, 'niveles.txt')
     if not os.path.exists(filepath):
         raise IOError('File %s does not exists.')
@@ -48,6 +48,7 @@ def read_levels():
 
 
 def read_records():
+    # Lectura del fichero de records
     filepath = os.path.join(BASEPATH, 'records.txt')
     if not os.path.exists(filepath):
         return {}
@@ -63,20 +64,24 @@ def read_records():
 
 
 def save_records(records):
+    # Salvado de records obtenidos en el juego actual
     filepath = os.path.join(BASEPATH, 'records.txt')
     fich = open(filepath, 'w')
-    fich.write(str(len(records))+'\n')
+    fich.write(str(len(records)) + '\n')
     for level, record in sorted(records.items()):
         fich.write('%d %i\n' % (level, record))
     fich.close()
 
 
 def select_level(levels, records):
+    # VerificaciÛn de selecciÛn correcta de nivel
     choosen = None
+    # C·lculo de ˙ltimo nivel con record
     if records:
         max_level = min(len(levels), max([l for l in range(len(levels)) if l in records]) + 1)
     else:
         choosen = 1
+    # ValidaciÛn de entrada
     while choosen is None:
         try:
             choosen = raw_input('Elija nivel (%d-%d): ' % (1, max_level))
@@ -92,11 +97,12 @@ def select_level(levels, records):
 
 
 def get_dimensions(cars):
-    w = max(max(map(lambda c: c[X] + c[SIZE], filter(lambda c: c[DIR] == 'H', cars.values()))),
-            max(map(lambda c: c[X], filter(lambda c: c[DIR] == 'V', cars.values()))))
-    h = max(max(map(lambda c: c[Y] + c[SIZE], filter(lambda c: c[DIR] == 'V', cars.values()))),
-            max(map(lambda c: c[Y], filter(lambda c: c[DIR] == 'H', cars.values()))))
-    return w + 1, h + 1
+    # ObtenciÛn de dimensiones que se ajusten a los coches del nivel
+    cells = reduce(lambda x, y: list(set(x) | set(y)), map(car_range, cars.values()))
+    x, y = 0, 1  # PosiciÛn de coordenadas en la tupla (x, y)
+    w = max(map(lambda c: c[x], cells))
+    h = max(map(lambda c: c[y], cells))
+    return w + 2, h + 2  # AÒadimos bordes
 
 
 def print_record(level, records):
@@ -105,7 +111,9 @@ def print_record(level, records):
 
 
 def get_horizontal_pintable(name, car):
+    # ConstrucciÛn de la representaciÛn de coche horizontal
     _, x, y, s = car
+    # Bordes izquierdo y derecho del coche
     cells = {(x, y): [CES + COE * (BLOCK_W - 1)] +
                      [CNS + ' ' * (BLOCK_W - 1)] * ((BLOCK_H - 3) // 2) +
                      [CNS + ' %s  ' % name] +
@@ -116,7 +124,7 @@ def get_horizontal_pintable(name, car):
                              ['  %s ' % name.lower() + CNS] +
                              [' ' * (BLOCK_W - 1) + CNS] * ((BLOCK_H - 3) // 2) +
                              [COE * (BLOCK_W - 1) + CON]}
-
+    # Casillas intermedias
     for xs in range(1, s - 1):
         cells[x + xs, y] = [COE * BLOCK_W] + \
                            [u' ' * BLOCK_W] * (BLOCK_H - 2) + \
@@ -125,7 +133,9 @@ def get_horizontal_pintable(name, car):
 
 
 def get_vertical_pintable(name, car):
+    # ConstrucciÛn de la representaciÛn de coche vertical
     _, x, y, s = car
+    # Bordes superior e inferior derecho del coche
     cells = {(x, y): [CES + COE * (BLOCK_W - 2) + CSO] +
                      [CNS + ' ' * (BLOCK_W - 2) + CNS] * ((BLOCK_H - 3) // 2) +
                      [CNS + ' %s ' % name + CNS] +
@@ -136,13 +146,14 @@ def get_vertical_pintable(name, car):
                              [CNS + ' %s ' % name.lower() + CNS] +
                              [CNS + ' ' * (BLOCK_W - 2) + CNS] * ((BLOCK_H - 3) // 2) +
                              [CNE + COE * (BLOCK_W - 2) + CON]}
-
+    # Casillas intermedias
     for ys in range(1, s - 1):
         cells[x, y + ys] = [CNS + ' ' * (BLOCK_W - 2) + CNS] * BLOCK_H
     return cells
 
 
 def get_cars_printable(cars):
+    # Proxy para obtener representaciÛn de un coche
     cells = {}
     getprintable = {'H': get_horizontal_pintable, 'V': get_vertical_pintable}
     for name, car in cars.items():
@@ -151,32 +162,56 @@ def get_cars_printable(cars):
 
 
 def get_output_printable(height, output):
-    if not (0 < output[X] < height - 1):
+    # RepresentaciÛn de la salida del nivel
+    if not (0 < output[X] < height - 1):  # OrientaciÛn horizontal
         return {output: [CSOM * BLOCK_W]}
-    else:
+    else:  # OrientaciÛn vertical
         return {output: [CSOM] * BLOCK_H}
 
 
-def print_table(width, height, cars):
+def update_win_cell(cells, height, output):
+    # RepresentaciÛn especial de la casilla de salida al ganar el juego
+    x, y = 0, 1
+    if not (0 < output[y] < height - 1):
+        cells[output][0] = CSOM * BLOCK_W
+        cells[output].append([CONE + (COE * (BLOCK_W - 1))])
+    else:
+        cells[output][0] = CSOM + cells[output][0][1:] + CONS
+        for i in range(1, BLOCK_H):
+            cells[output][i] = CSOM + cells[output][i][1:] + CNS
+
+
+def print_table(width, height, cars, win=False):
+    # ImpresiÛn por pantalla de estado actual del tablero
+
+    # Esquinas del tablero
     cells = {(0, 0): CES, (width - 1, 0): CSO, (0, height - 1): CNE, (width - 1, height - 1): CON}
 
+    # Bordes superior e inferior
     for j in range(1, width - 1):
         cells[j, 0] = [COES + (COE * (BLOCK_W - 1))]
         cells[j, height - 1] = [CONE + (COE * (BLOCK_W - 1))]
 
+    # Bordes izquierdo y derecho
     for i in range(1, height - 1):
         cells[0, i] = [CNES] + [CNS] * (BLOCK_H - 1)
         cells[width - 1, i] = [CONS] + [CNS] * (BLOCK_H - 1)
 
-    cells.update(get_cars_printable(cars))
-
+    # InclusiÛn de la salida en el tablero
     cells.update(get_output_printable(height, OUTPUT))
 
-    for y in range(height):
+    # InclusiÛn de los coches en el tablero
+    cells.update(get_cars_printable(cars))
+
+    if win:  # InclusiÛn de la casilla de salida en caso de ganar
+        update_win_cell(cells, height, OUTPUT)
+
+    # Bucle de impresiÛn del tablero
+    for y in range(height):  # Recorrido por filas
         block_size = 1 if not y or y == height - 1 else BLOCK_H
-        for i in range(block_size):
+        for i in range(block_size):  # ImpresiÛn por cada lÌnea del bloque
             line = ''
-            for x in range(width):
+            for x in range(width):  # Recorrido por columnas
                 cell = cells.get((x, y), None)
                 try:
                     line += cell[i] if cell else ' ' * BLOCK_W
@@ -186,6 +221,7 @@ def print_table(width, height, cars):
 
 
 def ask_movement(cars):
+    # ValidaciÛn de entrada de los movimientos en el turno
     movements = ''
     while not movements:
         movements = raw_input('Movimientos = ')
@@ -196,6 +232,7 @@ def ask_movement(cars):
 
 
 def move_forwards(car):
+    # Movimiento hacia adelante del coche
     if car[DIR] == 'H':
         return car[X] + 1, car[Y]
     else:
@@ -203,6 +240,7 @@ def move_forwards(car):
 
 
 def move_backwards(car):
+    # Movimiento hacia atr·s del coche
     if car[DIR] == 'H':
         return car[X] - 1, car[Y]
     else:
@@ -210,20 +248,24 @@ def move_backwards(car):
 
 
 def car_range(car):
-    if car[DIR] == 'V':
-        return [(car[X], i) for i in range(car[Y], car[Y] + car[SIZE])]
-    else:
+    # Lista de las coordenadas de bloque ocupadas por un coche
+    if car[DIR] == 'H':
         return [(j, car[Y]) for j in range(car[X], car[X] + car[SIZE])]
+    else:
+        return [(car[X], i) for i in range(car[Y], car[Y] + car[SIZE])]
 
 
 def check_win(car):
+    # VerificaciÛn de la coordenadas de salida entre las casillas de un coche
     return OUTPUT in car_range(car)
 
 
 def check_collision(carid, car, cars, width, height):
+    # VerificaciÛn de colisiÛn con los bordes del tablero
     if not all([0 < x < width - 1 and 0 < y < height - 1 for x, y in car_range(car)]):
         return True
 
+    # VerificaciÛn de intersecciÛn entre las casillas de dos coches
     if any([any([(x, y) in car_range(c) for k, c in cars.items() if k != carid]) for x, y in car_range(car)]):
         return True
 
@@ -231,18 +273,21 @@ def check_collision(carid, car, cars, width, height):
 
 
 def make_movements(width, height, cars, movements):
+    # EjecuciÛn de los movimientos dados
     for i, move in enumerate(movements):
         carid = move.upper()
         car = cars[carid]
+        # C·lculo de nuevas coordenadas del coche
         if move.isupper():
             x, y = move_backwards(car)
         else:
             x, y = move_forwards(car)
         car = car[DIR], x, y, car[SIZE]
-        if carid == 'A':
-            if check_win(car):
+        if carid == TARGET:
+            if check_win(car):  # VerificaciÛn de coche objetivo fuera del tablero
                 cars.update({carid: car})
                 return i + 1, None, WIN
+        # VerificaciÛn de colisiÛn con las nuevas coordenadas
         if not check_collision(carid, car, cars, width, height):
             cars.update({carid: car})
         else:
@@ -251,10 +296,12 @@ def make_movements(width, height, cars, movements):
 
 
 def play(cars):
+    # FunciÛn principal del juego
     win = None
     count = 0
-    width, height = get_dimensions(cars)
+    width, height = get_dimensions(cars)  # C·lculo de tamaÒo del tablero
     print_table(width, height, cars)
+    # Inicio del bucle del juego
     movements = ask_movement(cars)
     moves, collision, win = make_movements(width, height, cars, movements)
     count += moves
@@ -263,10 +310,12 @@ def play(cars):
             print('Movimiento %s imposible por bloqueo' % collision)
         print_table(width, height, cars)
         movements = ask_movement(cars)
-        moves, collision, win = make_movements(width, height, cars, movements)
+        moves, collision, win = make_movements(width
+                                               , height, cars, movements)
         count += moves
 
-    print_table(width, height, cars)
+    # ImpresiÛn final del juego
+    print_table(width, height, cars, win)
     return count
 
 
@@ -275,22 +324,26 @@ def ask_play_again():
 
 
 def main():
+    # FunciÛn principal del programa
     levels = read_levels()
     records = read_records()
-    level, cars = select_level(levels, records)
+    level, cars = select_level(levels, records)  # SelecciÛn de nivel
     while level is not None:
-        print_record(level, records)
-        movements = play(cars)
+        print_record(level, records)  # ImpresiÛn de record actual
+        movements = play(cars)  # Juego
         print('ENHORABUENA, HA COMPLETADO EL NIVEL!')
         print('Movimientos: %d' % movements, end=' ')
+        # VerificaciÛn de nuevo record
         last_record = records.get(level, None)
         if not last_record or movements > last_record:
             records[level] = movements
             save_records(records)
             print('(NUEVO RECORD!)')
-        if ask_play_again():
+        else:
+            print()
+        if ask_play_again(): # Consulta sobre paso al siguiente nivel
             level += 1
-            cars = levels[level-1]
+            cars = levels[level - 1]
         else:
             level = None
     save_records(records)
